@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>乘法预热：一共有几个呢？</title>
+    <style>
+        :root {
+            --primary: #4FC3F7;
+            --success: #81C784;
+            --error: #E57373;
+            --warn: #FFD54F;
+            --bg: #F8FAFC;
+            --key-bg: #F1F5F9;
+            --key-bg-active: #E2E8F0;
+            --del-bg: #FFEBEE;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 20px; background: var(--bg);
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            display: flex; justify-content: center; min-height: 100vh;
+        }
+        .app {
+            background: white; border-radius: 40px; padding: 30px 20px;
+            max-width: 600px; width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center;
+            display: flex; flex-direction: column;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            position: relative;
+        }
+        h1 { color: var(--primary); font-size: 24px; margin-top: 0; margin-bottom: 10px; }
+        .header-row {
+            display: flex; justify-content: center; align-items: center;
+            gap: 15px; margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .progress { color: #94A3B8; font-size: 14px; }
+        .exam-status-bar {
+            display: none; justify-content: space-between; align-items: center;
+            background: #FFF3E0; padding: 8px 15px; border-radius: 20px;
+            margin-bottom: 15px; border: 1px solid #FFCC80;
+        }
+        .exam-status-bar.active { display: flex; flex-wrap: wrap; gap: 5px; }
+        .timer-box { color: #E65100; font-weight: bold; font-size: 18px; }
+        .score-box { color: #2E7D32; font-weight: bold; font-size: 18px; }
+        .visual-area {
+            background: #F1F5F9; border-radius: 24px; padding: 25px 15px;
+            margin-bottom: 15px; min-height: 180px;
+            display: flex; flex-wrap: wrap; justify-content: center;
+            align-content: center; gap: 15px; position: relative;
+            transition: all 0.3s ease;
+        }
+        .array-row { display: flex; flex-wrap: wrap; justify-content: center; width: 100%; gap: 10px 15px; }
+        .group-box {
+            background: #E3F2FD; padding: 15px; border-radius: 20px;
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+            box-shadow: inset 0 0 0 2px #90CAF9;
+        }
+        .pair-box { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .pair-item { display: flex; gap: 5px; padding: 5px; align-items: center; border-bottom: 2px dashed #90A4AE; }
+        .emoji-icon { font-size: 55px; line-height: 1.2; display: inline-block; }
+        .question-hint {
+            font-size: 24px; color: #F57F17; background: #FFF8E1;
+            padding: 6px 18px; border-radius: 30px; border: 1px dashed #FFD54F;
+            display: inline-block; margin-top: 5px; margin-bottom: 10px;
+        }
+        .btn-hint {
+            background: var(--warn); border: none; border-radius: 40px;
+            padding: 8px 20px; font-size: 16px; color: #4A3A00; 
+            cursor: pointer; box-shadow: 0 3px 0 #F9A825; margin: 10px auto 15px auto;
+            display: inline-block;
+        }
+        .btn-hint:active { transform: translateY(3px); box-shadow: 0 0 0 #F9A825; }
+        .input-area { 
+            display: flex; justify-content: center; align-items: center; 
+            gap: 12px; flex-wrap: wrap; margin-bottom: 15px; 
+        }
+        .input-area input {
+            width: 110px; padding: 12px; font-size: 24px; text-align: center;
+            border: 3px solid #E2E8F0; border-radius: 16px; outline: none; font-weight: bold; color: #475569;
+            background: #F8FAFC;
+        }
+        .btn-check {
+            background: var(--primary); color: white; border: none;
+            padding: 12px 25px; font-size: 20px; border-radius: 40px; cursor: pointer;
+            box-shadow: 0 4px 0 #0288D1; transition: 0.1s;
+        }
+        .btn-check:active { transform: translateY(4px); box-shadow: 0 0 0 #0288D1; }
+        .btn-next {
+            background: #FFF; border: 2px solid #CBD5E1; border-radius: 40px;
+            padding: 12px 25px; font-size: 20px; color: #475569; cursor: pointer;
+            box-shadow: 0 4px 0 #94A3B8; transition: 0.1s;
+        }
+        .btn-next:active { transform: translateY(4px); box-shadow: 0 0 0 #94A3B8; }
+        .feedback { min-height: 40px; margin-bottom: 10px; font-size: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .feedback .ok { color: #2E7D32; font-weight: bold; }
+        .feedback .no { color: #C62828; font-weight: bold; }
+        .feedback .tip { color: #F57F17; }
+        .numpad-grid {
+            display: grid; grid-template-columns: repeat(6, 1fr);
+            gap: 15px; max-width: 350px; margin: 10px auto 0 auto; width: 100%;
+        }
+        .numpad-key {
+            background: var(--key-bg); border: none; aspect-ratio: 1 / 1;
+            border-radius: 50%; font-size: 28px; font-weight: bold;
+            color: #334155; cursor: pointer; box-shadow: 0 4px 0 #CBD5E1;
+            transition: all 0.05s linear; user-select: none;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .numpad-key:active { transform: translateY(4px); box-shadow: 0 0 0 #CBD5E1; background: var(--key-bg-active); }
+        .numpad-key.del { background: var(--del-bg); color: #D32F2F; font-size: 24px; box-shadow: 0 4px 0 #EF9A9A; }
+        .numpad-key.del:active { background: #FFCDD2; }
+        .btn-exam {
+            background: #9575CD; color: white; border: none;
+            padding: 10px 25px; font-size: 18px; border-radius: 40px; cursor: pointer;
+            box-shadow: 0 4px 0 #512DA8; transition: 0.1s;
+        }
+        .btn-exam:active { transform: translateY(4px); box-shadow: 0 0 0 #512DA8; }
+        .btn-exam.cancel { background: #90A4AE; box-shadow: 0 4px 0 #607D8B; }
+        .leaderboard-area {
+            margin-top: 20px; padding-top: 15px; border-top: 2px dashed #E2E8F0;
+        }
+        .leaderboard-area h3 { color: #3E2723; margin: 0 0 10px 0; font-size: 20px; }
+        .lb-list {
+            list-style: none; padding: 0; margin: 0; text-align: left;
+            max-height: 200px; overflow-y: auto;
+        }
+        .lb-list li {
+            background: #F1F5F9; padding: 8px 15px; margin-bottom: 5px;
+            border-radius: 20px; display: flex; justify-content: space-between;
+            font-size: 15px; align-items: center;
+        }
+        .lb-list li:nth-child(1) { background: #FFECB3; border: 1px solid #FFD54F; }
+        .lb-list li:nth-child(2) { background: #E0E0E0; border: 1px solid #BDBDBD; }
+        .lb-list li:nth-child(3) { background: #FFCCBC; border: 1px solid #FFAB91; }
+        .rank-badge { font-weight: bold; color: #795548; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; align-items: center;
+            justify-content: center; z-index: 1000; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 40px; padding: 30px;
+            max-width: 400px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 0; margin-bottom: 20px;
+        }
+        .modal-header h2 { margin: 0; color: #9575CD; font-size: 22px; }
+        .modal-close {
+            cursor: pointer; font-size: 26px; color: #90A4AE;
+            line-height: 1; padding: 5px 10px; border-radius: 50%;
+            transition: all 0.2s; font-family: sans-serif;
+            position: absolute; top: 15px; right: 20px;
+        }
+        .modal-close:hover, .modal-close:active { background: #F1F5F9; color: #475569; }
+        .modal-box label { display: block; text-align: left; margin: 10px 0 5px; font-weight: bold; }
+        .modal-box select, .modal-box input {
+            width: 100%; padding: 12px; font-size: 18px; border: 2px solid #E2E8F0;
+            border-radius: 16px; outline: none; margin-bottom: 15px;
+        }
+        .modal-box button {
+            width: 100%; padding: 15px; font-size: 20px; border: none;
+            border-radius: 40px; background: #9575CD; color: white; font-weight: bold;
+            cursor: pointer; box-shadow: 0 4px 0 #512DA8; transition: 0.1s;
+        }
+        .modal-box button:active { transform: translateY(4px); box-shadow: 0 0 0 #512DA8; }
+        .modal-box button:disabled { opacity: 0.6; transform: translateY(4px); box-shadow: 0 0 0 #512DA8; cursor: not-allowed; }
+        .modal-msg { color: #E53935; font-size: 14px; margin-top: -10px; margin-bottom: 10px; display: none; }
+
+        @media (max-width: 480px) {
+            .app { padding: 20px 15px; } .emoji-icon { font-size: 45px; }
+            h1 { font-size: 20px; } .question-hint { font-size: 20px; padding: 4px 14px; }
+            .input-area input { width: 90px; font-size: 20px; }
+            .btn-check, .btn-next { padding: 10px 18px; font-size: 17px; }
+            .numpad-grid { gap: 8px; max-width: 280px; }
+            .numpad-key { font-size: 24px; }
+            .numpad-key.del { font-size: 18px; }
+        }
+        @media (max-width: 375px) {
+            .app { padding: 15px 10px; } .visual-area { padding: 15px 10px; }
+            .numpad-grid { gap: 6px; max-width: 250px; }
+            .numpad-key { font-size: 20px; }
+            .input-area { gap: 8px; }
+            .btn-check, .btn-next { padding: 8px 14px; font-size: 15px; }
+        }
+        input[type=text]::-webkit-inner-spin-button, input[type=text]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=text] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1>🎲 乘法预热：一共有几个呢？</h1>
+    <div class="header-row">
+        <span class="progress" id="progressText">热身练习中</span>
+        <button class="btn-exam" id="btnExamMode" onclick="openExamModal()">📝 答题模式</button>
+    </div>
+    <div class="exam-status-bar" id="examStatusBar">
+        <span class="timer-box">⏳ 剩余: <span id="timerDisplay">60</span>s</span>
+        <span class="score-box">✅ 答对: <span id="scoreDisplay">0</span></span>
+    </div>
+    <div class="visual-area" id="visualArea"></div>
+    <div class="question-hint" id="hintText">口诀：五六？</div>
+    <button class="btn-hint" onclick="showHint()">💡 小提示</button>
+    <div class="input-area">
+        <input type="text" id="answerInput" placeholder="?" inputmode="numeric" readonly>
+        <button class="btn-check" onclick="checkAnswer()">✅ 检查</button>
+        <button class="btn-next" onclick="generateQuestion()">🔄 换一题</button>
+    </div>
+    <div class="feedback" id="feedback"><span class="tip">👀 仔细观察，它们是几个几个数的？</span></div>
+    <div class="numpad-grid" id="numpad">
+        <button class="numpad-key" data-key="1">1</button>
+        <button class="numpad-key" data-key="2">2</button>
+        <button class="numpad-key" data-key="3">3</button>
+        <button class="numpad-key" data-key="4">4</button>
+        <button class="numpad-key" data-key="5">5</button>
+        <div></div>
+        <button class="numpad-key" data-key="6">6</button>
+        <button class="numpad-key" data-key="7">7</button>
+        <button class="numpad-key" data-key="8">8</button>
+        <button class="numpad-key" data-key="9">9</button>
+        <button class="numpad-key" data-key="0">0</button>
+        <button class="numpad-key del" data-key="backspace">⌫</button>
+    </div>
+    <div class="leaderboard-area">
+        <h3>🏆 今日排行榜</h3>
+        <ul class="lb-list" id="leaderboardList"><li style="justify-content:center; color:#94A3B8;">加载中...</li></ul>
+    </div>
+</div>
+<div class="modal-overlay" id="examModal">
+    <div class="modal-box">
+        <span class="modal-close" onclick="closeExamModal()">×</span>
+        <div class="modal-header"><h2>📝 答题模式</h2></div>
+        <label for="classSelect">选择班级</label>
+        <select id="classSelect">
+            <option value="">请选择...</option>
+            <option value="1班">1班</option>
+            <option value="2班">2班</option>
+            <option value="3班">3班</option>
+            <option value="4班">4班</option>
+            <option value="5班">5班</option>
+            <option value="6班">6班</option>
+            <option value="7班">7班</option>
+        </select>
+        <label for="nameInput">输入姓名</label>
+        <input type="text" id="nameInput" placeholder="请输入您的姓名" maxlength="10">
+        <div class="modal-msg" id="modalMsg">⚠️ 姓名不在白名单中，请核对后重试。</div>
+        <button id="startExamBtn" onclick="validateAndStartExam()">开始答题 (倒计时1分钟)</button>
+        <div style="margin-top:15px; font-size:14px; color:#94A3B8; text-align:left;">* 仅限白名单学生参与，数据将实时上传。</div>
+    </div>
+</div>
+
+<script>
+    const emojiPool = ['🍎', '🍊', '🍋', '🍇', '🍉', '🍓', '🍑', '🥝', '🍌', '🍩', '🧁', '🍭', '🐱', '🐶', '🐰', '🐻', '🦊', '🐼'];
+    const layoutTypes = ['row', 'group', 'pair']; 
+    let currentQuestion = {};
+    let isWaiting = false;
+    let autoTimer = null;
+    let isExamMode = false;
+    let examTimeLeft = 60;
+    let correctCount = 0;
+    let examTimerInterval = null;
+    let isExamFinished = false;
+    let currentStudentClass = '';
+    let currentStudentName = '';
+
+    const API_WHITELIST = 'https://wzkjgz.site/api/5tmbx2o6rg/all';
+    const API_POST_SCORE = 'https://wzkjgz.site/api/3on5m3kfyb';
+    const API_LEADERBOARD = 'https://wzkjgz.site/api/3on5m3kfyb/all';
+
+    function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function numToChinese(num) { const map = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']; return map[num] || num; }
+
+    function generateQuestion() {
+        if (isExamMode && isExamFinished) return;
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        isWaiting = false;
+        const emoji = emojiPool[Math.floor(Math.random() * emojiPool.length)];
+        const layout = layoutTypes[Math.floor(Math.random() * layoutTypes.length)];
+        let rows = getRandomInt(2, 6); let cols = getRandomInt(2, 6);
+        while (rows * cols > 36) { cols = getRandomInt(2, 6); rows = getRandomInt(2, 6); }
+        if (layout === 'pair') cols = 2; 
+        const total = rows * cols;
+        const small = Math.min(rows, cols);
+        const large = Math.max(rows, cols);
+        const hintStr = `${numToChinese(small)}${numToChinese(large)}？`;
+        currentQuestion = { emoji, layout, rows, cols, total, hint: hintStr, small, large };
+        renderVisual();
+        document.getElementById('hintText').innerText = '口诀：' + hintStr;
+        document.getElementById('feedback').innerHTML = `<span class="tip">🤔 边数边思考，填上口诀里的数字吧！</span>`;
+        document.getElementById('answerInput').value = "";
+        document.getElementById('answerInput').focus();
+    }
+
+    function renderVisual() {
+        const area = document.getElementById('visualArea');
+        area.innerHTML = '';
+        const { emoji, layout, rows, cols } = currentQuestion;
+        if (layout === 'row') {
+            for (let i = 0; i < rows; i++) {
+                const rowDiv = document.createElement('div'); rowDiv.className = 'array-row';
+                for (let j = 0; j < cols; j++) {
+                    const span = document.createElement('span'); span.className = 'emoji-icon'; span.innerText = emoji;
+                    rowDiv.appendChild(span);
+                }
+                area.appendChild(rowDiv);
+            }
+        } else if (layout === 'group') {
+            for (let i = 0; i < rows; i++) {
+                const groupDiv = document.createElement('div'); groupDiv.className = 'group-box';
+                for (let j = 0; j < cols; j++) {
+                    const span = document.createElement('span'); span.className = 'emoji-icon'; span.innerText = emoji;
+                    groupDiv.appendChild(span);
+                }
+                area.appendChild(groupDiv);
+            }
+        } else if (layout === 'pair') {
+            const pairDiv = document.createElement('div'); pairDiv.className = 'pair-box';
+            for (let i = 0; i < rows; i++) {
+                const item = document.createElement('div'); item.className = 'pair-item';
+                for (let j = 0; j < cols; j++) {
+                    const span = document.createElement('span'); span.className = 'emoji-icon'; span.innerText = emoji;
+                    item.appendChild(span);
+                }
+                pairDiv.appendChild(item);
+            }
+            area.appendChild(pairDiv);
+        }
+    }
+
+    function checkAnswer() {
+        if (isWaiting) return;
+        if (isExamMode && isExamFinished) {
+            document.getElementById('feedback').innerHTML = `<span class="no">⏰ 答题时间已到，请查看成绩！</span>`;
+            return;
+        }
+        const val = document.getElementById('answerInput').value.trim();
+        if (val === "") { document.getElementById('feedback').innerHTML = `<span class="no">请输入数字哦！</span>`; return; }
+        const userAnswer = Number(val);
+        const correct = currentQuestion.total;
+        if (userAnswer === correct) {
+            if (isExamMode) {
+                correctCount++;
+                document.getElementById('scoreDisplay').innerText = correctCount;
+            }
+            document.getElementById('feedback').innerHTML = `<span class="ok">🌟 完全正确！<b>口诀：${currentQuestion.hint}</b> 的答案就是 <b>${correct}</b>！${isExamMode ? '继续加油！' : '2秒后自动进入下一题...'}</span>`;
+            isWaiting = true;
+            autoTimer = setTimeout(() => {
+                generateQuestion();
+            }, isExamMode ? 1000 : 2000);
+        } else {
+            document.getElementById('feedback').innerHTML = `<span class="no">❌ 好像不对哦，再仔细观察一下排法，数仔细点~</span>`;
+        }
+    }
+
+    function showHint() {
+        const { layout, emoji, hint, small, large } = currentQuestion;
+        let msg = "";
+        if (layout === 'row') msg = `💡 这里有 <b>${large}</b> 排，每排有 <b>${small}</b> 个 ${emoji}。<b>口诀：${hint}</b> 等于多少呢？`;
+        else if (layout === 'group') msg = `💡 这里有 <b>${large}</b> 个框框，每个框框里都有 <b>${small}</b> 个 ${emoji}。<b>口诀：${hint}</b> 等于多少呢？`;
+        else if (layout === 'pair') msg = `💡 这里有 <b>${large}</b> 对 ${emoji}，每对有 <b>${small}</b> 个。<b>口诀：${hint}</b> 等于多少呢？`;
+        document.getElementById('feedback').innerHTML = `<span class="tip">${msg}</span>`;
+    }
+
+    document.getElementById('numpad').addEventListener('click', function(e) {
+        const key = e.target.getAttribute('data-key');
+        const input = document.getElementById('answerInput');
+        if (!key || (isExamMode && isExamFinished)) return;
+        if (key === 'backspace') input.value = input.value.slice(0, -1);
+        else if (input.value.length < 4) input.value += key;
+        input.focus();
+    });
+
+    /* --- 答题模式逻辑 --- */
+    function openExamModal() {
+        if (isExamMode) {
+            if(confirm("确定要退出答题模式吗？当前进度将丢失。")) {
+                endExamMode(true);
+            }
+            return;
+        }
+        document.getElementById('examModal').classList.add('active');
+        document.getElementById('modalMsg').style.display = 'none';
+        document.getElementById('startExamBtn').disabled = false;
+        document.getElementById('startExamBtn').innerText = "开始答题 (倒计时1分钟)";
+    }
+
+    function closeExamModal() {
+        document.getElementById('examModal').classList.remove('active');
+        document.getElementById('modalMsg').style.display = 'none';
+        document.getElementById('startExamBtn').disabled = false;
+        document.getElementById('startExamBtn').innerText = "开始答题 (倒计时1分钟)";
+    }
+
+    async function validateAndStartExam() {
+        const classVal = document.getElementById('classSelect').value;
+        const nameVal = document.getElementById('nameInput').value.trim();
+        if (!classVal) { alert("请选择您的班级！"); return; }
+        if (!nameVal) { alert("请输入您的姓名！"); return; }
+
+        const btn = document.getElementById('startExamBtn');
+        btn.disabled = true;
+        btn.innerText = "正在验证白名单...";
+        document.getElementById('modalMsg').style.display = 'none';
+
+        try {
+            console.log("正在请求白名单接口:", API_WHITELIST);
+            const response = await fetch(API_WHITELIST, { mode: 'cors' });
+            if (!response.ok) throw new Error(`服务器响应状态码: ${response.status}`);
+            const data = await response.json();
+            console.log("【白名单】原始返回数据类型:", typeof data);
+            console.log("【白名单】原始返回内容:", data);
+
+            // 终极提取逻辑
+            let listData = extractArrayFromResponse(data);
+            console.log("【白名单】最终提取的名单列表:", listData);
+
+            let isAuthorized = false;
+            let reason = "未知错误";
+
+            if (Array.isArray(listData)) {
+                if (listData.length === 0) reason = "白名单数据为空";
+                else {
+                    const targetCombined = `${classVal}-${nameVal}`;
+                    const targetCombined2 = `${classVal} ${nameVal}`;
+                    for (const item of listData) {
+                        if (typeof item === 'string' && (item === targetCombined || item === targetCombined2)) {
+                            isAuthorized = true; break;
+                        } else if (typeof item === 'object' && item !== null) {
+                            const c = item.class || item.Class || item.cls;
+                            const n = item.name || item.Name || item.nick;
+                            if (c && n) {
+                                if (String(c).replace(/[-\s]/g, '') === String(classVal).replace(/[-\s]/g, '') &&
+                                    String(n).replace(/[-\s]/g, '') === String(nameVal).replace(/[-\s]/g, '')) {
+                                    isAuthorized = true; break;
+                                }
+                            }
+                        }
+                    }
+                    if (!isAuthorized) reason = "姓名不在当前班级白名单中";
+                }
+            } else {
+                reason = `无法提取到数组。${typeof listData === 'object' ? JSON.stringify(listData) : String(listData)}`;
+            }
+
+            if (!isAuthorized) {
+                document.getElementById('modalMsg').style.display = 'block';
+                console.warn("白名单验证失败原因:", reason);
+                btn.disabled = false; btn.innerText = "开始答题 (倒计时1分钟)";
+                return;
+            }
+
+            currentStudentClass = classVal; currentStudentName = nameVal;
+            document.getElementById('examModal').classList.remove('active');
+            startExamMode();
+
+        } catch (err) {
+            console.error(err);
+            alert("白名单连接失败: " + err.message);
+            btn.disabled = false; btn.innerText = "开始答题 (倒计时1分钟)";
+        }
+    }
+
+    // 通用的数据提取器（递归查找数组）
+    function extractArrayFromResponse(obj) {
+        let foundArray = null;
+        // 1. 如果本身是数组
+        if (Array.isArray(obj)) return obj;
+        // 2. 如果是对象
+        if (obj && typeof obj === 'object') {
+            // 优先常见字段
+            const keys = ['data', 'list', 'rows', 'items', 'members', 'students', 'users', 'result', 'results', 'content'];
+            for (const key of keys) {
+                if (obj[key] && Array.isArray(obj[key])) return obj[key];
+            }
+            // 3. 深度递归：遍历所有属性找数组
+            function findRecursively(currentObj) {
+                if (foundArray) return;
+                for (const key in currentObj) {
+                    if (currentObj.hasOwnProperty(key)) {
+                        const val = currentObj[key];
+                        if (Array.isArray(val)) {
+                            foundArray = val; return;
+                        } else if (val && typeof val === 'object') {
+                            findRecursively(val);
+                        }
+                    }
+                }
+            }
+            findRecursively(obj);
+            if (foundArray) return foundArray;
+        }
+        // 4. 如果是可切分的字符串
+        if (typeof obj === 'string' && obj.trim()) {
+            if (obj.includes('\n')) return obj.split('\n').map(s => s.trim()).filter(s => s);
+            if (obj.includes(',')) return obj.split(',').map(s => s.trim()).filter(s => s);
+            if (obj.includes(';')) return obj.split(';').map(s => s.trim()).filter(s => s);
+        }
+        return null; // 完全找不到
+    }
+
+
+    function startExamMode() {
+        isExamMode = true; isExamFinished = false; examTimeLeft = 60; correctCount = 0;
+        document.getElementById('examStatusBar').classList.add('active');
+        document.getElementById('timerDisplay').innerText = examTimeLeft;
+        document.getElementById('scoreDisplay').innerText = correctCount;
+        document.getElementById('btnExamMode').innerText = "⏹ 退出答题";
+        document.getElementById('btnExamMode').classList.add('cancel');
+        document.getElementById('progressText').innerText = "⏰ 答题模式进行中...";
+        generateQuestion();
+        if (examTimerInterval) clearInterval(examTimerInterval);
+        examTimerInterval = setInterval(() => {
+            examTimeLeft--;
+            document.getElementById('timerDisplay').innerText = examTimeLeft;
+            if (examTimeLeft <= 0) {
+                clearInterval(examTimerInterval); examTimerInterval = null;
+                isExamFinished = true;
+                document.getElementById('feedback').innerHTML = `<span class="no">⏰ 时间到！正在提交您的成绩...</span>`;
+                submitScore();
+            }
+        }, 1000);
+    }
+
+    function endExamMode(isManualCancel = false) {
+        if (examTimerInterval) clearInterval(examTimerInterval);
+        isExamMode = false; isExamFinished = true;
+        document.getElementById('examStatusBar').classList.remove('active');
+        document.getElementById('btnExamMode').innerText = "📝 答题模式";
+        document.getElementById('btnExamMode').classList.remove('cancel');
+        document.getElementById('progressText').innerText = "热身练习中";
+        if (!isManualCancel) document.getElementById('feedback').innerHTML = `<span class="ok">🏆 答题结束！您的最终成绩为答对 <b>${correctCount}</b> 题！</span>`;
+        else document.getElementById('feedback').innerHTML = `<span class="tip">已退出答题模式，切换回热身练习。</span>`;
+        generateQuestion();
+    }
+
+    async function submitScore() {
+        const submitData = { class: currentStudentClass, name: currentStudentName, score: correctCount, timestamp: new Date().toISOString() };
+        try {
+            const response = await fetch(API_POST_SCORE, {
+                method: 'POST', mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submitData)
+            });
+            if (response.ok) { endExamMode(false); fetchLeaderboard(); } 
+            else { document.getElementById('feedback').innerHTML = `<span class="no">❌ 成绩上传失败，请检查网络！</span>`; endExamMode(true); }
+        } catch (err) { document.getElementById('feedback').innerHTML = `<span class="no">❌ 连接服务器失败！</span>`; endExamMode(true); }
+    }
+
+    /* --- 排行榜逻辑 --- */
+    async function fetchLeaderboard() {
+        const listElement = document.getElementById('leaderboardList');
+        listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">⏳ 加载排行榜...</li>';
+        try {
+            const response = await fetch(API_LEADERBOARD, { mode: 'cors' });
+            if (!response.ok) throw new Error(`HTTP状态码 ${response.status}`);
+            
+            const data = await response.json();
+            console.log("【排行榜】原始返回数据类型:", typeof data);
+            console.log("【排行榜】原始返回内容:", data);
+
+            const listData = extractArrayFromResponse(data);
+            console.log("【排行榜】提取后的列表:", listData);
+
+            if (Array.isArray(listData)) {
+                // 兼容不同的得分字段：score, count, num, points, total
+                const sorted = listData.sort((a, b) => {
+                    const aScore = a.score || a.count || a.num || a.points || a.total || 0;
+                    const bScore = b.score || b.count || b.num || b.points || b.total || 0;
+                    return bScore - aScore;
+                });
+                const topList = sorted.slice(0, 10);
+                if (topList.length === 0) {
+                    listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">暂无数据，快来挑战吧！</li>';
+                } else {
+                    listElement.innerHTML = topList.map((item, index) => {
+                        const rank = index + 1;
+                        let medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                        const c = item.class || item.Class || item.cls;
+                        const n = item.name || item.Name || item.nick;
+                        const s = item.score || item.count || item.num || item.points || item.total || 0;
+                        return `<li><span><span class="rank-badge">${medal}</span> ${n} (${c})</span> <span style="color:#2E7D32;font-weight:bold;">${s}题</span></li>`;
+                    }).join('');
+                }
+            } else {
+                // 如果实在解不出来，直接显示为什么失败
+                let errorMsg = '数据格式异常';
+                if (typeof data === 'object') {
+                    try { errorMsg = '原始数据: ' + JSON.stringify(data).substring(0, 80) + '...'; } catch(e) {}
+                } else {
+                    errorMsg = '原始数据: ' + String(data);
+                }
+                listElement.innerHTML = `<li style="justify-content:center; color:#E57373; font-size:13px; white-space:pre-wrap;">❌ ${errorMsg}</li>`;
+            }
+        } catch (err) {
+            console.error(err);
+            listElement.innerHTML = `<li style="justify-content:center; color:#E57373;">网络异常: ${err.message}</li>`;
+        }
+    }
+
+    window.onload = function() {
+        generateQuestion();
+        fetchLeaderboard();
+    };
+</script>
+</body>
+</html>
