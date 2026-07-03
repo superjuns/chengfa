@@ -117,6 +117,17 @@
         }
         .btn-exam:active { transform: translateY(4px); box-shadow: 0 0 0 #512DA8; }
         .btn-exam.cancel { background: #90A4AE; box-shadow: 0 4px 0 #607D8B; }
+        
+        /* 新增实时排名样式 */
+        .rank-status-box {
+            display: none; margin: 10px 0 15px 0; padding: 8px 15px;
+            background: #E8F5E9; border-radius: 30px;
+            border: 1px solid #A5D6A7; color: #2E7D32; font-weight: bold;
+            font-size: 18px; justify-content: center; align-items: center; gap: 5px;
+        }
+        .rank-status-box.active { display: flex; }
+        .rank-status-box .rank-num { font-size: 22px; }
+
         .leaderboard-area {
             margin-top: 20px; padding-top: 15px; border-top: 2px dashed #E2E8F0;
         }
@@ -179,6 +190,7 @@
             .numpad-grid { gap: 8px; max-width: 280px; }
             .numpad-key { font-size: 24px; }
             .numpad-key.del { font-size: 18px; }
+            .rank-status-box { font-size: 16px; padding: 6px 12px; }
         }
         @media (max-width: 375px) {
             .app { padding: 15px 10px; } .visual-area { padding: 15px 10px; }
@@ -202,6 +214,12 @@
         <span class="timer-box">⏳ 剩余: <span id="timerDisplay">60</span>s</span>
         <span class="score-box">✅ 答对: <span id="scoreDisplay">0</span></span>
     </div>
+    
+    <!-- 新增实时排名通知框 -->
+    <div class="rank-status-box" id="rankStatusBox">
+        🏁 当前排名：<span class="rank-num" id="currentRankNum">--</span>
+    </div>
+
     <div class="visual-area" id="visualArea"></div>
     <div class="question-hint" id="hintText">口诀：五六？</div>
     <button class="btn-hint" onclick="showHint()">💡 小提示</button>
@@ -414,7 +432,6 @@
             console.log("【白名单】原始返回数据类型:", typeof data);
             console.log("【白名单】原始返回内容:", data);
 
-            // 终极提取逻辑
             let listData = extractArrayFromResponse(data);
             console.log("【白名单】最终提取的名单列表:", listData);
 
@@ -464,19 +481,14 @@
         }
     }
 
-    // 通用的数据提取器（递归查找数组）
     function extractArrayFromResponse(obj) {
         let foundArray = null;
-        // 1. 如果本身是数组
         if (Array.isArray(obj)) return obj;
-        // 2. 如果是对象
         if (obj && typeof obj === 'object') {
-            // 优先常见字段
             const keys = ['data', 'list', 'rows', 'items', 'members', 'students', 'users', 'result', 'results', 'content'];
             for (const key of keys) {
                 if (obj[key] && Array.isArray(obj[key])) return obj[key];
             }
-            // 3. 深度递归：遍历所有属性找数组
             function findRecursively(currentObj) {
                 if (foundArray) return;
                 for (const key in currentObj) {
@@ -493,15 +505,13 @@
             findRecursively(obj);
             if (foundArray) return foundArray;
         }
-        // 4. 如果是可切分的字符串
         if (typeof obj === 'string' && obj.trim()) {
             if (obj.includes('\n')) return obj.split('\n').map(s => s.trim()).filter(s => s);
             if (obj.includes(',')) return obj.split(',').map(s => s.trim()).filter(s => s);
             if (obj.includes(';')) return obj.split(';').map(s => s.trim()).filter(s => s);
         }
-        return null; // 完全找不到
+        return null;
     }
-
 
     function startExamMode() {
         isExamMode = true; isExamFinished = false; examTimeLeft = 60; correctCount = 0;
@@ -511,6 +521,8 @@
         document.getElementById('btnExamMode').innerText = "⏹ 退出答题";
         document.getElementById('btnExamMode').classList.add('cancel');
         document.getElementById('progressText').innerText = "⏰ 答题模式进行中...";
+        // 答题开始时隐藏排名
+        document.getElementById('rankStatusBox').classList.remove('active');
         generateQuestion();
         if (examTimerInterval) clearInterval(examTimerInterval);
         examTimerInterval = setInterval(() => {
@@ -545,15 +557,24 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submitData)
             });
-            if (response.ok) { endExamMode(false); fetchLeaderboard(); } 
+            if (response.ok) { 
+                endExamMode(false); 
+                // 提交成绩后立即获取最新排行榜，并触发实时排名反馈
+                await fetchLeaderboard(true); 
+            } 
             else { document.getElementById('feedback').innerHTML = `<span class="no">❌ 成绩上传失败，请检查网络！</span>`; endExamMode(true); }
         } catch (err) { document.getElementById('feedback').innerHTML = `<span class="no">❌ 连接服务器失败！</span>`; endExamMode(true); }
     }
 
-    /* --- 排行榜逻辑 --- */
-    async function fetchLeaderboard() {
+    /* --- 排行榜及实时排名逻辑 --- */
+    async function fetchLeaderboard(triggerRankFeedback = false) {
         const listElement = document.getElementById('leaderboardList');
         listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">⏳ 加载排行榜...</li>';
+        // 如果还未进入答题，先隐藏排名框
+        if (!triggerRankFeedback) {
+            document.getElementById('rankStatusBox').classList.remove('active');
+        }
+
         try {
             const response = await fetch(API_LEADERBOARD, { mode: 'cors' });
             if (!response.ok) throw new Error(`HTTP状态码 ${response.status}`);
@@ -562,16 +583,38 @@
             console.log("【排行榜】原始返回数据类型:", typeof data);
             console.log("【排行榜】原始返回内容:", data);
 
-            const listData = extractArrayFromResponse(data);
+            let listData = extractArrayFromResponse(data);
             console.log("【排行榜】提取后的列表:", listData);
 
             if (Array.isArray(listData)) {
-                // 兼容不同的得分字段：score, count, num, points, total
+                // 去重：相同班级和姓名，只保留得分最高的一条记录
+                const uniqueMap = new Map();
+                listData.forEach(item => {
+                    const c = item.class || item.Class || item.cls || '';
+                    const n = item.name || item.Name || item.nick || '';
+                    if (!c && !n) return;
+                    const key = `${c}|${n}`;
+                    const currentScore = Number(item.score || item.count || item.num || item.points || item.total || 0);
+                    if (!uniqueMap.has(key)) {
+                        uniqueMap.set(key, item);
+                    } else {
+                        const existingItem = uniqueMap.get(key);
+                        const existingScore = Number(existingItem.score || existingItem.count || existingItem.num || existingItem.points || existingItem.total || 0);
+                        if (currentScore > existingScore) {
+                            uniqueMap.set(key, item);
+                        }
+                    }
+                });
+                listData = Array.from(uniqueMap.values());
+                console.log("【排行榜】去重后的列表:", listData);
+
+                // 按得分降序排列
                 const sorted = listData.sort((a, b) => {
-                    const aScore = a.score || a.count || a.num || a.points || a.total || 0;
-                    const bScore = b.score || b.count || b.num || b.points || b.total || 0;
+                    const aScore = Number(a.score || a.count || a.num || a.points || a.total || 0);
+                    const bScore = Number(b.score || b.count || b.num || b.points || b.total || 0);
                     return bScore - aScore;
                 });
+                
                 const topList = sorted.slice(0, 10);
                 if (topList.length === 0) {
                     listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">暂无数据，快来挑战吧！</li>';
@@ -579,14 +622,41 @@
                     listElement.innerHTML = topList.map((item, index) => {
                         const rank = index + 1;
                         let medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-                        const c = item.class || item.Class || item.cls;
-                        const n = item.name || item.Name || item.nick;
-                        const s = item.score || item.count || item.num || item.points || item.total || 0;
+                        const c = item.class || item.Class || item.cls || '未知班级';
+                        const n = item.name || item.Name || item.nick || '未知姓名';
+                        const s = Number(item.score || item.count || item.num || item.points || item.total || 0);
                         return `<li><span><span class="rank-badge">${medal}</span> ${n} (${c})</span> <span style="color:#2E7D32;font-weight:bold;">${s}题</span></li>`;
                     }).join('');
                 }
+
+                // 【新增逻辑】实时排名反馈
+                if (triggerRankFeedback && currentStudentClass && currentStudentName) {
+                    const rankBox = document.getElementById('rankStatusBox');
+                    const rankNumDisplay = document.getElementById('currentRankNum');
+                    
+                    let userRank = -1;
+                    for (let i = 0; i < sorted.length; i++) {
+                        const item = sorted[i];
+                        const c = item.class || item.Class || item.cls || '';
+                        const n = item.name || item.Name || item.nick || '';
+                        // 精确匹配当前考试的班级和姓名
+                        if (c === currentStudentClass && n === currentStudentName) {
+                            userRank = i + 1;
+                            break;
+                        }
+                    }
+                    
+                    if (userRank !== -1) {
+                        rankNumDisplay.innerText = userRank + ` (共${sorted.length}人)`;
+                        rankBox.classList.add('active');
+                    } else {
+                        // 如果刚提交API还未更新榜单，提示“计算中...”
+                        rankNumDisplay.innerText = '计算中...';
+                        rankBox.classList.add('active');
+                    }
+                }
+
             } else {
-                // 如果实在解不出来，直接显示为什么失败
                 let errorMsg = '数据格式异常';
                 if (typeof data === 'object') {
                     try { errorMsg = '原始数据: ' + JSON.stringify(data).substring(0, 80) + '...'; } catch(e) {}
@@ -603,7 +673,7 @@
 
     window.onload = function() {
         generateQuestion();
-        fetchLeaderboard();
+        fetchLeaderboard(false);
     };
 </script>
 </body>
