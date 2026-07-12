@@ -567,7 +567,13 @@
     }
 
     /* --- 排行榜及实时排名逻辑 --- */
-    async function fetchLeaderboard(triggerRankFeedback = false) {
+    function getBeijingTodayStr() {
+        var d = new Date();
+        d.setTime(d.getTime() + 8 * 3600 * 1000);
+        return d.toISOString().slice(0, 10);
+    }
+
+        async function fetchLeaderboard(triggerRankFeedback = false) {
         const listElement = document.getElementById('leaderboardList');
         listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">⏳ 加载排行榜...</li>';
         // 如果还未进入答题，先隐藏排名框
@@ -587,6 +593,13 @@
             console.log("【排行榜】提取后的列表:", listData);
 
             if (Array.isArray(listData)) {
+                // 只保留当天的提交记录（北京时间）
+                var todayStr = getBeijingTodayStr();
+                listData = listData.filter(function(item) {
+                    var dateStr = item.submitted_at || item.timestamp || item.createTime || '';
+                    return String(dateStr).slice(0, 10) === todayStr;
+                });
+
                 // 去重：相同班级和姓名，只保留得分最高的一条记录
                 const uniqueMap = new Map();
                 listData.forEach(item => {
