@@ -50,6 +50,12 @@
             align-items: center; gap: 8px; position: relative;
             overflow: hidden; flex-shrink: 0;
         }
+        .visual-content {
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; gap: 8px;
+            transform-origin: center center;
+            transition: transform 0.2s ease;
+        }
         .array-row { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap; }
         .group-box {
             background: #E3F2FD; padding: 10px; border-radius: 16px;
@@ -58,7 +64,7 @@
         }
         .pair-box { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .pair-item { display: flex; gap: 4px; padding: 3px; align-items: center; border-bottom: 2px dashed #90A4AE; }
-        .emoji-icon { font-size: 40px; line-height: 1; display: inline-block; flex-shrink: 0; }
+        .emoji-icon { font-size: 50px; line-height: 1; display: inline-block; flex-shrink: 0; }
         .question-hint {
             font-size: 20px; color: #F57F17; background: #FFF8E1;
             padding: 4px 14px; border-radius: 30px; border: 1px dashed #FFD54F;
@@ -318,7 +324,11 @@
         area.innerHTML = '';
         const { emoji, layout, rows, cols } = currentQuestion;
 
-        // 先以默认大小渲染
+        // 用 content 包裹所有元素，便于整体缩放
+        const content = document.createElement('div');
+        content.className = 'visual-content';
+        content.id = 'visualContent';
+
         if (layout === 'row') {
             for (let i = 0; i < rows; i++) {
                 const rowDiv = document.createElement('div'); rowDiv.className = 'array-row';
@@ -326,7 +336,7 @@
                     const span = document.createElement('span'); span.className = 'emoji-icon'; span.innerText = emoji;
                     rowDiv.appendChild(span);
                 }
-                area.appendChild(rowDiv);
+                content.appendChild(rowDiv);
             }
         } else if (layout === 'group') {
             for (let i = 0; i < rows; i++) {
@@ -335,7 +345,7 @@
                     const span = document.createElement('span'); span.className = 'emoji-icon'; span.innerText = emoji;
                     groupDiv.appendChild(span);
                 }
-                area.appendChild(groupDiv);
+                content.appendChild(groupDiv);
             }
         } else if (layout === 'pair') {
             const pairDiv = document.createElement('div'); pairDiv.className = 'pair-box';
@@ -347,37 +357,39 @@
                 }
                 pairDiv.appendChild(item);
             }
-            area.appendChild(pairDiv);
+            content.appendChild(pairDiv);
         }
 
-        // 自适应缩放：测量内容尺寸，超出则等比缩小
-        fitVisualToBox();
+        area.appendChild(content);
+
+        // 先用默认大小渲染，再整体缩放适配
+        requestAnimationFrame(() => {
+            fitVisualToBox();
+        });
     }
 
     function fitVisualToBox() {
         const area = document.getElementById('visualArea');
-        const emojis = area.querySelectorAll('.emoji-icon');
-        if (emojis.length === 0) return;
+        const content = document.getElementById('visualContent');
+        if (!content) return;
 
-        const boxW = area.clientWidth - 30; // 减去padding
-        const boxH = area.clientHeight - 30;
-        let fontSize = 55; // 起始尝试大小
-        const minSize = 16;
-        const maxSize = 60;
+        // 重置缩放
+        content.style.transform = 'scale(1)';
 
-        // 先量初始尺寸
-        emojis.forEach(e => e.style.fontSize = fontSize + 'px');
+        const boxW = area.clientWidth - 20;
+        const boxH = area.clientHeight - 20;
+        const contentW = content.offsetWidth;
+        const contentH = content.offsetHeight;
 
-        // 简单策略：从大到小试，直到内容装下
-        for (let fs = maxSize; fs >= minSize; fs -= 2) {
-            emojis.forEach(e => e.style.fontSize = fs + 'px');
-            // 强制重排后测量
-            const contentW = area.scrollWidth;
-            const contentH = area.scrollHeight;
-            if (contentW <= boxW && contentH <= boxH) {
-                break;
-            }
+        if (contentW <= boxW && contentH <= boxH) {
+            return; // 已经装下，不用缩
         }
+
+        const scaleX = boxW / contentW;
+        const scaleY = boxH / contentH;
+        const scale = Math.min(scaleX, scaleY);
+
+        content.style.transform = `scale(${scale})`;
     }
 
     function checkAnswer() {
