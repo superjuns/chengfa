@@ -44,21 +44,21 @@
         .timer-box { color: #E65100; font-weight: bold; font-size: 18px; }
         .score-box { color: #2E7D32; font-weight: bold; font-size: 18px; }
         .visual-area {
-            background: #F1F5F9; border-radius: 24px; padding: 25px 15px;
-            margin-bottom: 15px; min-height: 180px;
-            display: flex; flex-wrap: wrap; justify-content: center;
-            align-content: center; gap: 15px; position: relative;
-            transition: all 0.3s ease;
+            background: #F1F5F9; border-radius: 24px; padding: 15px;
+            margin-bottom: 15px; height: 280px;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; gap: 10px; position: relative;
+            overflow: hidden; flex-shrink: 0;
         }
-        .array-row { display: flex; flex-wrap: wrap; justify-content: center; width: 100%; gap: 10px 15px; }
+        .array-row { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap; }
         .group-box {
-            background: #E3F2FD; padding: 15px; border-radius: 20px;
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+            background: #E3F2FD; padding: 10px; border-radius: 16px;
+            display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 6px;
             box-shadow: inset 0 0 0 2px #90CAF9;
         }
-        .pair-box { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
-        .pair-item { display: flex; gap: 5px; padding: 5px; align-items: center; border-bottom: 2px dashed #90A4AE; }
-        .emoji-icon { font-size: 55px; line-height: 1.2; display: inline-block; }
+        .pair-box { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .pair-item { display: flex; gap: 4px; padding: 3px; align-items: center; border-bottom: 2px dashed #90A4AE; }
+        .emoji-icon { font-size: 40px; line-height: 1; display: inline-block; flex-shrink: 0; }
         .question-hint {
             font-size: 24px; color: #F57F17; background: #FFF8E1;
             padding: 6px 18px; border-radius: 30px; border: 1px dashed #FFD54F;
@@ -317,6 +317,8 @@
         const area = document.getElementById('visualArea');
         area.innerHTML = '';
         const { emoji, layout, rows, cols } = currentQuestion;
+
+        // 先以默认大小渲染
         if (layout === 'row') {
             for (let i = 0; i < rows; i++) {
                 const rowDiv = document.createElement('div'); rowDiv.className = 'array-row';
@@ -346,6 +348,35 @@
                 pairDiv.appendChild(item);
             }
             area.appendChild(pairDiv);
+        }
+
+        // 自适应缩放：测量内容尺寸，超出则等比缩小
+        fitVisualToBox();
+    }
+
+    function fitVisualToBox() {
+        const area = document.getElementById('visualArea');
+        const emojis = area.querySelectorAll('.emoji-icon');
+        if (emojis.length === 0) return;
+
+        const boxW = area.clientWidth - 30; // 减去padding
+        const boxH = area.clientHeight - 30;
+        let fontSize = 55; // 起始尝试大小
+        const minSize = 16;
+        const maxSize = 60;
+
+        // 先量初始尺寸
+        emojis.forEach(e => e.style.fontSize = fontSize + 'px');
+
+        // 简单策略：从大到小试，直到内容装下
+        for (let fs = maxSize; fs >= minSize; fs -= 2) {
+            emojis.forEach(e => e.style.fontSize = fs + 'px');
+            // 强制重排后测量
+            const contentW = area.scrollWidth;
+            const contentH = area.scrollHeight;
+            if (contentW <= boxW && contentH <= boxH) {
+                break;
+            }
         }
     }
 
@@ -390,6 +421,17 @@
         if (key === 'backspace') input.value = input.value.slice(0, -1);
         else if (input.value.length < 4) input.value += key;
         input.focus();
+    });
+
+    // 窗口大小变化时重新自适应图形
+    let resizeTimer = null;
+    window.addEventListener('resize', function() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (currentQuestion && currentQuestion.emoji) {
+                fitVisualToBox();
+            }
+        }, 100);
     });
 
     /* --- 答题模式逻辑 --- */
