@@ -447,11 +447,55 @@
     });
 
     /* --- 答题模式逻辑 --- */
+    // 工具函数
+    function getUrlParam(name) {
+        return new URLSearchParams(window.location.search).get(name) || '';
+    }
+    function normStr(s) {
+        return String(s || '').replace(/班/g, '').replace(/\s/g, '').toLowerCase();
+    }
+
+    // URL参数自动登录（平台跳转时免输入）
+    async function tryAutoLoginFromUrl() {
+        const cls = getUrlParam('class') || getUrlParam('cls') || getUrlParam('班级');
+        const name = getUrlParam('name') || getUrlParam('姓名');
+        if (!cls || !name) return false;
+        const normCls = /^\d+$/.test(cls) ? cls + '班' : cls;
+        try {
+            const resp = await fetch(API_WHITELIST);
+            if (!resp.ok) return false;
+            const data = await resp.json();
+            const listData = extractArrayFromResponse(data);
+            if (!Array.isArray(listData)) return false;
+            const matched = listData.some(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const ic = item.class || item['班级'] || item.className || '';
+                    const iname = item.name || item['姓名'] || item.studentName || '';
+                    return normStr(ic) === normStr(normCls) && normStr(iname) === normStr(name);
+                }
+                return false;
+            });
+            if (!matched) return false;
+            localStorage.setItem('chengfa_class', normCls);
+            localStorage.setItem('chengfa_name', name);
+            return true;
+        } catch (e) { return false; }
+    }
+
     function openExamModal() {
         if (isExamMode) {
             if(confirm("确定要退出答题模式吗？当前进度将丢失。")) {
                 endExamMode(true);
             }
+            return;
+        }
+        // 如果已有登录信息，直接开始答题
+        const savedCls = localStorage.getItem('chengfa_class');
+        const savedName = localStorage.getItem('chengfa_name');
+        if (savedCls && savedName) {
+            document.getElementById('classSelect').value = savedCls;
+            document.getElementById('nameInput').value = savedName;
+            validateAndStartExam();
             return;
         }
         document.getElementById('examModal').classList.add('active');
@@ -526,7 +570,9 @@
 
             currentStudentClass = classVal; currentStudentName = nameVal;
             document.getElementById('examModal').classList.remove('active');
-            startExamMode();
+            localStorage.setItem('chengfa_class', classVal);
+            localStorage.setItem('chengfa_name', nameVal);
+                        startExamMode();
 
         } catch (err) {
             console.error(err);
@@ -742,6 +788,9 @@
         generateQuestion();
         fetchLeaderboard(false);
     };
+    // URL参数自动登录（平台跳转时免输入）
+    tryAutoLoginFromUrl();
+
 </script>
 </body>
 </html>
