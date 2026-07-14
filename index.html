@@ -304,8 +304,8 @@
         isWaiting = false;
         const emoji = emojiPool[Math.floor(Math.random() * emojiPool.length)];
         const layout = layoutTypes[Math.floor(Math.random() * layoutTypes.length)];
-        let rows = getRandomInt(2, 6); let cols = getRandomInt(2, 6);
-        while (rows * cols > 36) { cols = getRandomInt(2, 6); rows = getRandomInt(2, 6); }
+        let rows = getRandomInt(2, 9); let cols = getRandomInt(2, 9);
+        while (rows * cols > 81) { cols = getRandomInt(2, 9); rows = getRandomInt(2, 9); }
         if (layout === 'pair') cols = 2; 
         const total = rows * cols;
         const small = Math.min(rows, cols);
