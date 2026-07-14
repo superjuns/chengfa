@@ -484,9 +484,7 @@
 
     function openExamModal() {
         if (isExamMode) {
-            if(confirm("确定要退出答题模式吗？当前进度将丢失。")) {
-                endExamMode(true);
-            }
+            endExamMode(true);
             return;
         }
         // 如果已有登录信息，直接开始答题
