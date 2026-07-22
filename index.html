@@ -665,7 +665,7 @@ window.fetch = function(url, options) {
     }
 
     async function submitScore() {
-        const submitData = { class: currentStudentClass, name: currentStudentName, score: correctCount, timestamp: new Date().toISOString() };
+        const submitData = { class: currentStudentClass, name: currentStudentName, score: correctCount, timestamp: new Date().toISOString(), submitted_at: new Date().toISOString() };
         try {
             const response = await fetch(API_POST_SCORE, {
                 method: 'POST', mode: 'cors',
