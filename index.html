@@ -360,6 +360,33 @@ window.fetch = function(url, options) {
     const API_WHITELIST = 'https://bjugehxenrvaqtodjkbc.supabase.co/rest/v1/whitelist?select=*';
     const API_POST_SCORE = 'https://bjugehxenrvaqtodjkbc.supabase.co/rest/v1/scores_chengfa';
     const API_LEADERBOARD = 'https://bjugehxenrvaqtodjkbc.supabase.co/rest/v1/scores_chengfa?select=*';
+    let yiqiGameSdk = null;
+
+    function initYiqiGameSdk() {
+        if (!yiqiGameSdk && window.YiqiMath) {
+            yiqiGameSdk = window.YiqiMath.init({
+                gameId: 'multiplication',
+                scoreEndpoint: API_POST_SCORE,
+                leaderboardEndpoint: API_LEADERBOARD,
+                ranking: 'score-desc',
+                includeGameId: false
+            });
+        }
+        return yiqiGameSdk;
+    }
+
+    function syncIdentityFromSdk() {
+        const sdk = initYiqiGameSdk();
+        const identity = sdk && sdk.getIdentity();
+        if (!identity) return false;
+        localStorage.setItem('chengfa_class', identity.class);
+        localStorage.setItem('chengfa_name', identity.name);
+        const classSelect = document.getElementById('classSelect');
+        const nameInput = document.getElementById('nameInput');
+        if (classSelect) classSelect.value = identity.class;
+        if (nameInput) nameInput.value = identity.name;
+        return true;
+    }
 
     function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function numToChinese(num) { const map = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']; return map[num] || num; }
@@ -637,6 +664,8 @@ window.fetch = function(url, options) {
             document.getElementById('examModal').classList.remove('active');
             localStorage.setItem('chengfa_class', classVal);
             localStorage.setItem('chengfa_name', nameVal);
+            const sdk = initYiqiGameSdk();
+            if (sdk) sdk.setIdentity({ class: classVal, name: nameVal });
                         startExamMode();
 
         } catch (err) {
@@ -717,12 +746,20 @@ window.fetch = function(url, options) {
     async function submitScore() {
         const submitData = { class: currentStudentClass, name: currentStudentName, score: correctCount, timestamp: new Date().toISOString(), submitted_at: new Date().toISOString() };
         try {
-            const response = await fetch(API_POST_SCORE, {
-                method: 'POST', mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(submitData)
-            });
-            if (response.ok) { 
+            const sdk = initYiqiGameSdk();
+            let submitted = false;
+            if (sdk) {
+                await sdk.submitScore(submitData, { includeGameId: false });
+                submitted = true;
+            } else {
+                const response = await fetch(API_POST_SCORE, {
+                    method: 'POST', mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(submitData)
+                });
+                submitted = response.ok;
+            }
+            if (submitted) {
                 endExamMode(false); 
                 // 提交成绩后立即获取最新排行榜，并触发实时排名反馈
                 await fetchLeaderboard(true); 
@@ -747,10 +784,14 @@ window.fetch = function(url, options) {
         }
 
         try {
-            const response = await fetch(API_LEADERBOARD, { mode: 'cors' });
-            if (!response.ok) throw new Error(`HTTP状态码 ${response.status}`);
-            
-            const data = await response.json();
+            const sdk = initYiqiGameSdk();
+            let data;
+            if (sdk) data = await sdk.request(API_LEADERBOARD, { mode: 'cors' });
+            else {
+                const response = await fetch(API_LEADERBOARD, { mode: 'cors' });
+                if (!response.ok) throw new Error(`HTTP状态码 ${response.status}`);
+                data = await response.json();
+            }
             console.log("【排行榜】原始返回数据类型:", typeof data);
             console.log("【排行榜】原始返回内容:", data);
 
@@ -850,6 +891,7 @@ window.fetch = function(url, options) {
     }
 
     window.onload = function() {
+        syncIdentityFromSdk();
         generateQuestion();
         fetchLeaderboard(false);
     };
