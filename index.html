@@ -198,6 +198,24 @@
             .numpad-key.del { font-size: 18px; }
             .rank-status-box { font-size: 16px; padding: 6px 12px; }
         }
+
+        /* 一起数学 · 系列统一身份信息弹窗 */
+        .modal-overlay.yiqi-identity-overlay { padding:max(18px,env(safe-area-inset-top)) 18px max(18px,env(safe-area-inset-bottom)); background:rgba(0,0,0,.30); backdrop-filter:blur(8px) saturate(120%); -webkit-backdrop-filter:blur(8px) saturate(120%); }
+        .modal-box.yiqi-identity-card { width:min(100%,420px); max-width:420px; max-height:calc(100svh - 36px); overflow-y:auto; padding:28px 28px 24px; border:1px solid rgba(0,0,0,.06); border-radius:24px; background:rgba(255,255,255,.98); box-shadow:0 24px 70px rgba(0,0,0,.22); color:#1d1d1f; text-align:left; }
+        .yiqi-identity-header { margin-bottom:22px; text-align:center; }
+        .modal-header .yiqi-identity-title { margin:0; color:#1d1d1f; font-size:28px; line-height:1.15; letter-spacing:-.02em; }
+        .yiqi-identity-description { margin:10px 0 0; color:#6e6e73; font-size:14px; line-height:1.55; }
+        .modal-box .yiqi-identity-field { display:block; margin:16px 0 0; color:#1d1d1f; font-size:15px; font-weight:600; }
+        .modal-box .yiqi-identity-field select,.modal-box .yiqi-identity-field input { width:100%; height:50px; margin:8px 0 0; padding:0 14px; border:1px solid #d2d2d7; border-radius:14px; outline:none; background:#fff; color:#1d1d1f; font:inherit; font-weight:400; transition:border-color 160ms ease,box-shadow 160ms ease; }
+        .modal-box .yiqi-identity-field select:focus,.modal-box .yiqi-identity-field input:focus { border-color:#007aff; box-shadow:0 0 0 4px rgba(0,122,255,.12); }
+        .modal-box .yiqi-identity-primary,.modal-box .yiqi-identity-secondary { width:100%; min-height:50px; padding:0 16px; border:0; border-radius:14px; box-shadow:none; cursor:pointer; }
+        .modal-box .yiqi-identity-primary { margin-top:22px; background:#007aff; color:#fff; font-size:17px; font-weight:700; box-shadow:0 8px 20px rgba(0,122,255,.18); }
+        .modal-box .yiqi-identity-secondary { margin-top:8px; background:transparent; color:#6e6e73; font-size:15px; font-weight:500; }
+        .modal-box .yiqi-identity-primary:active,.modal-box .yiqi-identity-secondary:active { transform:scale(.97); box-shadow:none; transition:transform 100ms ease-out; }
+        .modal-box .yiqi-identity-primary:disabled { opacity:.55; transform:none; box-shadow:none; }
+        .modal-msg.yiqi-identity-error { margin:12px 0 0; padding:10px 12px; border-radius:12px; background:#fff1f0; color:#c9342a; font-size:13px; line-height:1.45; }
+        @media(max-width:480px){.modal-box.yiqi-identity-card{padding:24px 20px 18px;border-radius:22px}.modal-header .yiqi-identity-title{font-size:25px}}
+        @media(prefers-reduced-motion:reduce){.modal-box .yiqi-identity-primary,.modal-box .yiqi-identity-secondary{transition:none}}
         @media (max-width: 375px) {
             .app { padding: 15px 10px; } .visual-area { padding: 15px 10px; }
             .numpad-grid { gap: 6px; max-width: 250px; }
@@ -254,11 +272,10 @@
         <ul class="lb-list" id="leaderboardList"><li style="justify-content:center; color:#94A3B8;">加载中...</li></ul>
     </div>
 </div>
-<div class="modal-overlay" id="examModal">
-    <div class="modal-box">
-        <span class="modal-close" onclick="closeExamModal()">×</span>
-        <div class="modal-header"><h2>📝 答题模式</h2></div>
-        <label for="classSelect">选择班级</label>
+<div class="modal-overlay yiqi-identity-overlay" id="examModal" role="dialog" aria-modal="true" aria-labelledby="chengfaIdentityTitle">
+    <div class="modal-box yiqi-identity-card">
+        <div class="modal-header yiqi-identity-header"><div><h2 class="yiqi-identity-title" id="chengfaIdentityTitle">✖️ 答题挑战</h2><p class="yiqi-identity-description">在 1 分钟内完成乘法预热，挑战你的最高得分</p></div></div>
+        <label class="yiqi-identity-field" for="classSelect">班级
         <select id="classSelect">
             <option value="">请选择...</option>
             <option value="1班">1班</option>
@@ -268,12 +285,13 @@
             <option value="5班">5班</option>
             <option value="6班">6班</option>
             <option value="7班">7班</option>
-        </select>
-        <label for="nameInput">输入姓名</label>
-        <input type="text" id="nameInput" placeholder="请输入您的姓名" maxlength="10">
-        <div class="modal-msg" id="modalMsg">⚠️ 姓名不在白名单中，请核对后重试。</div>
-        <button id="startExamBtn" onclick="validateAndStartExam()">开始答题 (倒计时1分钟)</button>
-        <div style="margin-top:15px; font-size:14px; color:#94A3B8; text-align:left;">* 仅限白名单学生参与，数据将实时上传。</div>
+        </select></label>
+        <label class="yiqi-identity-field" for="nameInput">姓名
+            <input type="text" id="nameInput" placeholder="请输入姓名" maxlength="10" autocomplete="name">
+        </label>
+        <div class="modal-msg yiqi-identity-error" id="modalMsg" role="status">⚠️ 姓名不在白名单中，请核对后重试。</div>
+        <button class="yiqi-identity-primary" id="startExamBtn" onclick="validateAndStartExam()">开始答题</button>
+        <button type="button" class="yiqi-identity-secondary" onclick="closeExamModal()">取消</button>
     </div>
 </div>
 
@@ -516,21 +534,22 @@ window.fetch = function(url, options) {
         document.getElementById('examModal').classList.add('active');
         document.getElementById('modalMsg').style.display = 'none';
         document.getElementById('startExamBtn').disabled = false;
-        document.getElementById('startExamBtn').innerText = "开始答题 (倒计时1分钟)";
+        document.getElementById('startExamBtn').innerText = "开始答题";
     }
 
     function closeExamModal() {
         document.getElementById('examModal').classList.remove('active');
         document.getElementById('modalMsg').style.display = 'none';
         document.getElementById('startExamBtn').disabled = false;
-        document.getElementById('startExamBtn').innerText = "开始答题 (倒计时1分钟)";
+        document.getElementById('startExamBtn').innerText = "开始答题";
     }
 
     async function validateAndStartExam() {
         const classVal = document.getElementById('classSelect').value;
         const nameVal = document.getElementById('nameInput').value.trim();
-        if (!classVal) { alert("请选择您的班级！"); return; }
-        if (!nameVal) { alert("请输入您的姓名！"); return; }
+        const modalMsg = document.getElementById('modalMsg');
+        if (!classVal) { modalMsg.textContent = "请选择班级"; modalMsg.style.display = 'block'; return; }
+        if (!nameVal) { modalMsg.textContent = "请输入姓名"; modalMsg.style.display = 'block'; document.getElementById('nameInput').focus(); return; }
 
         const btn = document.getElementById('startExamBtn');
         btn.disabled = true;
@@ -579,7 +598,7 @@ window.fetch = function(url, options) {
             if (!isAuthorized) {
                 document.getElementById('modalMsg').style.display = 'block';
                 console.warn("白名单验证失败原因:", reason);
-                btn.disabled = false; btn.innerText = "开始答题 (倒计时1分钟)";
+                btn.disabled = false; btn.innerText = "开始答题";
                 return;
             }
 
@@ -592,7 +611,7 @@ window.fetch = function(url, options) {
         } catch (err) {
             console.error(err);
             alert("白名单连接失败: " + err.message);
-            btn.disabled = false; btn.innerText = "开始答题 (倒计时1分钟)";
+            btn.disabled = false; btn.innerText = "开始答题";
         }
     }
 
@@ -803,6 +822,12 @@ window.fetch = function(url, options) {
         generateQuestion();
         fetchLeaderboard(false);
     };
+    document.getElementById('examModal').addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) closeExamModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeExamModal();
+    });
     // URL参数自动登录（平台跳转时免输入）
     tryAutoLoginFromUrl();
 
