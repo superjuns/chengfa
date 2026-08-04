@@ -216,6 +216,31 @@
         .modal-msg.yiqi-identity-error { margin:12px 0 0; padding:10px 12px; border-radius:12px; background:#fff1f0; color:#c9342a; font-size:13px; line-height:1.45; }
         @media(max-width:480px){.modal-box.yiqi-identity-card{padding:24px 20px 18px;border-radius:22px}.modal-header .yiqi-identity-title{font-size:25px}}
         @media(prefers-reduced-motion:reduce){.modal-box .yiqi-identity-primary,.modal-box .yiqi-identity-secondary{transition:none}}
+        /* 系列化 + 个性化：乘法预热 */
+        body[data-yiqi-game="multiplication"] { --yiqi-accent:#af52de; --yiqi-accent-soft:#f8effc; margin:0; padding:16px 14px calc(24px + env(safe-area-inset-bottom)); min-height:100svh; display:block; background:#f5f5f7; color:#1d1d1f; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif; }
+        body[data-yiqi-game="multiplication"] .app { width:min(100%,760px); max-width:760px; margin:0 auto; padding:22px; border:0; border-radius:28px; background:#fff; box-shadow:0 10px 32px rgba(0,0,0,.06); }
+        body[data-yiqi-game="multiplication"] h1 { margin:0; color:#1d1d1f; font-size:clamp(22px,4vw,30px); line-height:1.15; letter-spacing:-.02em; }
+        body[data-yiqi-game="multiplication"] .header-row { justify-content:space-between; margin:14px 0; padding:8px; border-radius:18px; background:#f5f5f7; }
+        body[data-yiqi-game="multiplication"] .progress { padding:0 8px; color:#6e6e73; font-size:14px; font-weight:600; }
+        body[data-yiqi-game="multiplication"] .btn-exam { min-height:46px; padding:0 18px; border:1px solid #007aff; border-radius:14px; background:#007aff; color:#fff; box-shadow:0 6px 16px rgba(0,122,255,.16); font-size:16px; font-weight:700; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 160ms ease; }
+        body[data-yiqi-game="multiplication"] .btn-exam.cancel { border-color:#ffd0ca; background:#fff1ef; color:#c9342a; box-shadow:none; }
+        body[data-yiqi-game="multiplication"] .visual-area { height:230px; margin:0 0 12px; padding:18px; border:1px solid #ead8f3; border-radius:24px; background:linear-gradient(145deg,#fcf8fe,#f4eafa); box-shadow:none; }
+        body[data-yiqi-game="multiplication"] .group-box { background:#fff; box-shadow:inset 0 0 0 1px #dec3eb; }
+        body[data-yiqi-game="multiplication"] .question-hint { margin:0 auto 8px; padding:7px 14px; border:0; border-radius:12px; background:#f8effc; color:#783692; font-size:18px; font-weight:700; }
+        body[data-yiqi-game="multiplication"] .btn-hint { min-height:44px; margin:0 auto 10px; padding:0 16px; border:0; border-radius:14px; background:#f2f2f7; color:#1d1d1f; box-shadow:none; font-weight:650; }
+        body[data-yiqi-game="multiplication"] .input-area { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; margin:0; }
+        body[data-yiqi-game="multiplication"] .input-area input { width:100%; min-width:0; height:52px; padding:0 14px; border:1px solid #d2d2d7; border-radius:14px; background:#f5f5f7; color:#1d1d1f; font-size:22px; box-shadow:none; }
+        body[data-yiqi-game="multiplication"] .btn-check,body[data-yiqi-game="multiplication"] .btn-next { min-height:52px; padding:0 18px; border-radius:14px; box-shadow:none; font-size:16px; font-weight:700; }
+        body[data-yiqi-game="multiplication"] .btn-check { border:1px solid #dec3eb; background:#fff; color:#1d1d1f; }
+        body[data-yiqi-game="multiplication"] .btn-next { border:1px solid transparent; background:#f2f2f7; color:#1d1d1f; }
+        body[data-yiqi-game="multiplication"] .feedback { min-height:48px; margin:6px 0; padding:8px 12px; border-radius:14px; background:#fafafa; font-size:15px; }
+        body[data-yiqi-game="multiplication"] .numpad-grid { max-width:none; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0; }
+        body[data-yiqi-game="multiplication"] .numpad-key { min-width:0; min-height:52px; aspect-ratio:auto; border:0; border-radius:15px; background:#f2f2f7; color:#1d1d1f; box-shadow:none; font-size:19px; transition:transform 100ms ease-out,background-color 140ms ease; }
+        body[data-yiqi-game="multiplication"] .numpad-key.del { background:#fff1ef; color:#c9342a; box-shadow:none; }
+        body[data-yiqi-game="multiplication"] .leaderboard-area { margin-top:14px; padding:16px; border:0; border-radius:22px; background:#f5f5f7; }
+        body[data-yiqi-game="multiplication"] .leaderboard-area h3 { color:#1d1d1f; font-size:17px; text-align:left; }
+        body[data-yiqi-game="multiplication"] .lb-list li { min-height:42px; margin-top:6px; padding:7px 12px; border:0; border-radius:13px; background:#fff; }
+        @media(max-width:560px){body[data-yiqi-game="multiplication"]{padding:8px 8px calc(18px + env(safe-area-inset-bottom))}body[data-yiqi-game="multiplication"] .app{padding:16px 12px;border-radius:24px}body[data-yiqi-game="multiplication"] .visual-area{height:210px}body[data-yiqi-game="multiplication"] .input-area{grid-template-columns:1fr 1fr}body[data-yiqi-game="multiplication"] .input-area input{grid-column:1/-1}body[data-yiqi-game="multiplication"] .numpad-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}body[data-yiqi-game="multiplication"] .numpad-key{min-height:48px}}
         @media (max-width: 375px) {
             .app { padding: 15px 10px; } .visual-area { padding: 15px 10px; }
             .numpad-grid { gap: 6px; max-width: 250px; }
@@ -227,12 +252,12 @@
         input[type=text] { -moz-appearance: textfield; }
     </style>
 </head>
-<body>
+<body data-yiqi-game="multiplication">
 <div class="app">
     <h1>🎲 乘法预热：一共有几个呢？</h1>
     <div class="header-row">
         <span class="progress" id="progressText">热身练习中</span>
-        <button class="btn-exam" id="btnExamMode" onclick="openExamModal()">📝 答题模式</button>
+        <button class="btn-exam" id="btnExamMode" data-yiqi-action="answer" onclick="openExamModal()">📝 答题模式</button>
     </div>
     <div class="exam-status-bar" id="examStatusBar">
         <span class="timer-box">⏳ 剩余: <span id="timerDisplay">60</span>s</span>
@@ -246,11 +271,11 @@
 
     <div class="visual-area" id="visualArea"></div>
     <div class="question-hint" id="hintText">口诀：五六？</div>
-    <button class="btn-hint" onclick="showHint()">💡 小提示</button>
+    <button class="btn-hint" data-yiqi-action="secondary" onclick="showHint()">💡 小提示</button>
     <div class="input-area">
         <input type="text" id="answerInput" placeholder="?" inputmode="numeric" readonly>
-        <button class="btn-check" onclick="checkAnswer()">✅ 检查</button>
-        <button class="btn-next" onclick="generateQuestion()">🔄 换一题</button>
+        <button class="btn-check" data-yiqi-action="verify" onclick="checkAnswer()">✅ 检查</button>
+        <button class="btn-next" data-yiqi-action="secondary" onclick="generateQuestion()">🔄 换一题</button>
     </div>
     <div class="feedback" id="feedback"><span class="tip">👀 仔细观察，它们是几个几个数的？</span></div>
     <div class="numpad-grid" id="numpad">
