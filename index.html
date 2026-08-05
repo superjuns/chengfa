@@ -65,6 +65,12 @@
         .pair-box { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .pair-item { display: flex; gap: 4px; padding: 3px; align-items: center; border-bottom: 2px dashed #90A4AE; }
         .emoji-icon { font-size: 50px; line-height: 1; display: inline-block; flex-shrink: 0; }
+        .visual-content.yiqi-correct .emoji-icon { animation: yiqi-array-pop 420ms cubic-bezier(.2,.8,.2,1) both; }
+        .visual-content.yiqi-correct .emoji-icon:nth-child(3n+2) { animation-delay: 45ms; }
+        .visual-content.yiqi-correct .emoji-icon:nth-child(3n) { animation-delay: 90ms; }
+        .yiqi-streak-pop { position:absolute; top:14px; right:14px; z-index:4; padding:7px 11px; border-radius:999px; background:#fff; color:#af52de; font-size:14px; font-weight:800; box-shadow:0 8px 22px rgba(175,82,222,.2); animation:yiqi-streak-pop 720ms cubic-bezier(.2,.8,.2,1) both; pointer-events:none; }
+        @keyframes yiqi-array-pop { 0%{transform:scale(.82);opacity:.5} 55%{transform:scale(1.14)} 100%{transform:scale(1);opacity:1} }
+        @keyframes yiqi-streak-pop { 0%{transform:translateY(10px) scale(.85);opacity:0} 35%{transform:translateY(0) scale(1.06);opacity:1} 100%{transform:translateY(-6px) scale(1);opacity:0} }
         .question-hint {
             font-size: 20px; color: #F57F17; background: #FFF8E1;
             padding: 4px 14px; border-radius: 30px; border: 1px dashed #FFD54F;
@@ -485,6 +491,25 @@ window.fetch = function(url, options) {
         content.style.transform = `scale(${scale})`;
     }
 
+    let feedbackStreak = 0;
+    function emitGameFeedback(type, detail) {
+        const feedback = window.__yiqiSdkBridge && window.__yiqiSdkBridge.feedback;
+        if (feedback && typeof feedback[type] === 'function') feedback[type](detail || {});
+    }
+    function celebrateArray() {
+        const content = document.getElementById('visualContent');
+        const area = document.getElementById('visualArea');
+        if (!content || !area) return;
+        content.classList.remove('yiqi-correct');
+        void content.offsetWidth;
+        content.classList.add('yiqi-correct');
+        const badge = document.createElement('span');
+        badge.className = 'yiqi-streak-pop';
+        badge.textContent = feedbackStreak >= 2 ? `连续答对 ${feedbackStreak} 题` : `${currentQuestion.rows} × ${currentQuestion.cols} = ${currentQuestion.total}`;
+        area.appendChild(badge);
+        setTimeout(() => badge.remove(), 760);
+    }
+
     function checkAnswer() {
         if (isWaiting) return;
         if (isExamMode && isExamFinished) {
@@ -496,16 +521,23 @@ window.fetch = function(url, options) {
         const userAnswer = Number(val);
         const correct = currentQuestion.total;
         if (userAnswer === correct) {
+            feedbackStreak++;
             if (isExamMode) {
                 correctCount++;
                 document.getElementById('scoreDisplay').innerText = correctCount;
             }
+            celebrateArray();
+            emitGameFeedback('correct', { answer:userAnswer, total:correct, rows:currentQuestion.rows, columns:currentQuestion.cols });
+            emitGameFeedback('streak', { count:feedbackStreak });
             document.getElementById('feedback').innerHTML = `<span class="ok">🌟 完全正确！<b>口诀：${currentQuestion.hint}</b> 的答案就是 <b>${correct}</b>！${isExamMode ? '继续加油！' : '2秒后自动进入下一题...'}</span>`;
             isWaiting = true;
             autoTimer = setTimeout(() => {
                 generateQuestion();
             }, isExamMode ? 1000 : 2000);
         } else {
+            feedbackStreak = 0;
+            emitGameFeedback('wrong', { answer:userAnswer, expected:correct });
+            emitGameFeedback('streak', { count:0 });
             document.getElementById('feedback').innerHTML = `<span class="no">❌ 好像不对哦，再仔细观察一下排法，数仔细点~</span>`;
         }
     }
@@ -738,7 +770,10 @@ window.fetch = function(url, options) {
         document.getElementById('btnExamMode').innerText = "答题模式";
         document.getElementById('btnExamMode').classList.remove('cancel');
         document.getElementById('progressText').innerText = "观察图形，想一想一共有几个";
-        if (!isManualCancel) document.getElementById('feedback').innerHTML = `<span class="ok">🏆 答题结束！您的最终成绩为答对 <b>${correctCount}</b> 题！</span>`;
+        if (!isManualCancel) {
+            document.getElementById('feedback').innerHTML = `<span class="ok">🏆 答题结束！您的最终成绩为答对 <b>${correctCount}</b> 题！</span>`;
+            emitGameFeedback('complete', { score:correctCount, duration:60 });
+        }
         else document.getElementById('feedback').innerHTML = `<span class="tip">已退出答题模式，切换回热身练习。</span>`;
         generateQuestion();
     }
