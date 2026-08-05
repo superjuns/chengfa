@@ -229,6 +229,9 @@
         body[data-yiqi-game="multiplication"] .game-kicker { margin:0 0 5px; color:var(--yiqi-accent); font-size:12px; line-height:1; font-weight:750; letter-spacing:.13em; }
         body[data-yiqi-game="multiplication"] h1 { margin:0; color:#1d1d1f; font-size:clamp(28px,6vw,38px); line-height:1.08; letter-spacing:-.035em; }
         body[data-yiqi-game="multiplication"] .practice-status { display:flex; align-items:center; min-height:38px; margin-bottom:10px; padding:0 12px; border-radius:13px; background:#f5f5f7; text-align:left; }
+        body[data-yiqi-game="multiplication"] .exam-status-bar { align-items:center; margin-bottom:10px; padding:6px; border:0; border-radius:16px; background:#f2f2f7; }
+        body[data-yiqi-game="multiplication"] .exam-status-bar.active { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        body[data-yiqi-game="multiplication"] .timer-box,body[data-yiqi-game="multiplication"] .score-box { min-height:40px; display:flex; align-items:center; justify-content:center; padding:0 11px; border-radius:12px; background:#fff; color:#1d1d1f; font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
         body[data-yiqi-game="multiplication"] .progress { color:#6e6e73; font-size:13px; font-weight:600; }
         body[data-yiqi-game="multiplication"] .btn-exam { min-height:46px; padding:0 18px; border:1px solid #007aff; border-radius:14px; background:#007aff; color:#fff; box-shadow:0 6px 16px rgba(0,122,255,.16); font-size:16px; font-weight:700; transition:transform 120ms cubic-bezier(.23,1,.32,1),background-color 160ms ease; }
         body[data-yiqi-game="multiplication"] .btn-exam:active,body[data-yiqi-game="multiplication"] .btn-hint:active,body[data-yiqi-game="multiplication"] .btn-check:active,body[data-yiqi-game="multiplication"] .btn-next:active,body[data-yiqi-game="multiplication"] .numpad-key:active { transform:scale(.97); }
