@@ -800,7 +800,7 @@ window.fetch = function(url, options) {
             if (submitted) {
                 endExamMode(false); 
                 // 提交成绩后立即获取最新排行榜，并触发实时排名反馈
-                await fetchLeaderboard(true); 
+                await fetchLeaderboard(true, correctCount);
             } 
             else { document.getElementById('feedback').innerHTML = `<span class="no">❌ 成绩上传失败，请检查网络！</span>`; endExamMode(true); }
         } catch (err) { document.getElementById('feedback').innerHTML = `<span class="no">❌ 连接服务器失败！</span>`; endExamMode(true); }
@@ -813,9 +813,22 @@ window.fetch = function(url, options) {
         return d.toISOString().slice(0, 10);
     }
 
-        async function fetchLeaderboard(triggerRankFeedback = false) {
+    function getBeijingDateStr(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value || '').slice(0, 10);
+        date.setTime(date.getTime() + 8 * 3600 * 1000);
+        return date.toISOString().slice(0, 10);
+    }
+
+    function normalizeIdentity(value) {
+        return String(value || '').normalize('NFKC').trim();
+    }
+
+    async function fetchLeaderboard(triggerRankFeedback = false, pendingScore = null, retryCount = 0) {
         const listElement = document.getElementById('leaderboardList');
-        listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">⏳ 加载排行榜...</li>';
+        if (retryCount === 0) {
+            listElement.innerHTML = '<li style="justify-content:center; color:#94A3B8;">⏳ 加载排行榜...</li>';
+        }
         // 如果还未进入答题，先隐藏排名框
         if (!triggerRankFeedback) {
             document.getElementById('rankStatusBox').classList.remove('active');
@@ -824,31 +837,28 @@ window.fetch = function(url, options) {
         try {
             const sdk = initYiqiGameSdk();
             let data;
-            if (sdk) data = await sdk.request(API_LEADERBOARD, { mode: 'cors' });
+            if (sdk) data = await sdk.request(API_LEADERBOARD, { mode: 'cors', cache: 'no-store' });
             else {
-                const response = await fetch(API_LEADERBOARD, { mode: 'cors' });
+                const response = await fetch(API_LEADERBOARD, { mode: 'cors', cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP状态码 ${response.status}`);
                 data = await response.json();
             }
-            console.log("【排行榜】原始返回数据类型:", typeof data);
-            console.log("【排行榜】原始返回内容:", data);
 
             let listData = extractArrayFromResponse(data);
-            console.log("【排行榜】提取后的列表:", listData);
 
             if (Array.isArray(listData)) {
                 // 只保留当天的提交记录（北京时间）
                 var todayStr = getBeijingTodayStr();
                 listData = listData.filter(function(item) {
                     var dateStr = item.submitted_at || item.timestamp || item.createTime || '';
-                    return String(dateStr).slice(0, 10) === todayStr;
+                    return getBeijingDateStr(dateStr) === todayStr;
                 });
 
                 // 去重：相同班级和姓名，只保留得分最高的一条记录
                 const uniqueMap = new Map();
                 listData.forEach(item => {
-                    const c = item.class || item.Class || item.cls || '';
-                    const n = item.name || item.Name || item.nick || '';
+                    const c = normalizeIdentity(item.class || item.Class || item.cls);
+                    const n = normalizeIdentity(item.name || item.Name || item.nick);
                     if (!c && !n) return;
                     const key = `${c}|${n}`;
                     const currentScore = Number(item.score || item.count || item.num || item.points || item.total || 0);
@@ -863,7 +873,6 @@ window.fetch = function(url, options) {
                     }
                 });
                 listData = Array.from(uniqueMap.values());
-                console.log("【排行榜】去重后的列表:", listData);
 
                 // 按得分降序排列
                 const sorted = listData.sort((a, b) => {
@@ -894,22 +903,30 @@ window.fetch = function(url, options) {
                     let userRank = -1;
                     for (let i = 0; i < sorted.length; i++) {
                         const item = sorted[i];
-                        const c = item.class || item.Class || item.cls || '';
-                        const n = item.name || item.Name || item.nick || '';
+                        const c = normalizeIdentity(item.class || item.Class || item.cls);
+                        const n = normalizeIdentity(item.name || item.Name || item.nick);
                         // 精确匹配当前考试的班级和姓名
-                        if (c === currentStudentClass && n === currentStudentName) {
+                        if (c === normalizeIdentity(currentStudentClass) && n === normalizeIdentity(currentStudentName)) {
                             userRank = i + 1;
                             break;
                         }
                     }
                     
                     if (userRank !== -1) {
-                        rankNumDisplay.innerText = userRank + ` (共${sorted.length}人)`;
+                        rankNumDisplay.innerText = `第${userRank}名（共${sorted.length}人）`;
                         rankBox.classList.add('active');
                     } else {
-                        // 如果刚提交API还未更新榜单，提示“计算中...”
-                        rankNumDisplay.innerText = '计算中...';
+                        const score = Number(pendingScore);
+                        const provisionalRank = Number.isFinite(score)
+                            ? sorted.filter(item => Number(item.score || item.count || item.num || item.points || item.total || 0) > score).length + 1
+                            : null;
+                        rankNumDisplay.innerText = provisionalRank
+                            ? `第${provisionalRank}名（${retryCount < 2 ? '同步中' : '按当前成绩'}）`
+                            : '成绩已提交，排名同步中';
                         rankBox.classList.add('active');
+                        if (retryCount < 2) {
+                            setTimeout(() => fetchLeaderboard(true, pendingScore, retryCount + 1), 1200 * (retryCount + 1));
+                        }
                     }
                 }
 
